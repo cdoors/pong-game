@@ -28,6 +28,11 @@ class Paddle:
         if self.posY + self.height >= HEIGHT:
             self.posY = HEIGHT - self.height
 
+    def restart_pos(self):
+        self.posY = HEIGHT//2 - self.height//2
+        self.state = 'stopped'
+        self.show()
+
 
 class Ball:
     def __init__(self, screen, color, posX, posY, radius):
@@ -57,6 +62,36 @@ class Ball:
     def wall_collision(self):
         self.dy = -self.dy
 
+    def restart_pos(self):
+        self.posX = WIDTH//2
+        self.posY = HEIGHT//2
+        self.dx = 0
+        self.dy = 0
+        self.show()
+
+class Score:
+    def __init__(self, screen, points, posX, posY):
+        self.screen = screen
+        self.points = points
+        self.posX = posX
+        self.posY = posY
+        self.font = pygame.font.SysFont( "monospace", 80, bold=True)
+        self.label = self.font.render(self.points, 0, WHITE)
+        self.show()
+
+    def show(self):
+        self.screen.blit( self.label, (self.posX - self.label.get_rect().width // 2, self.posY))
+
+    def increase(self):
+        points = int(self.points) + 1
+        self.points = str(points)
+        self.label = self.font.render(self.points, 0, WHITE)
+
+    def restart(self):
+        self.points = '0'
+        self.label = self.font.render(self.points, 0, WHITE)
+
+
 class CollisionManager:
     def between_ball_and_paddle1(self, ball, paddle):
         if ball.posY + ball.radius > paddle.posY and ball.posY - ball.radius < paddle1.posY + paddle1.height:
@@ -82,6 +117,13 @@ class CollisionManager:
 
         return False
 
+    def check_goal_player1(self, ball):
+        return ball.posX - ball.radius >= WIDTH
+
+    def check_goal_player2(self, ball):
+        return ball.posX + ball.radius <= 0
+
+
 ## Constants
 WIDTH = 900
 HEIGHT = 500
@@ -99,6 +141,14 @@ def paint_back():
     screen.fill(BLACK)
     pygame.draw.line(screen, WHITE, (WIDTH//2,0), (WIDTH//2, HEIGHT), 5)
 
+def restart():
+    paint_back()
+    score1.restart()
+    score2.restart()
+    ball.restart_pos()
+    paddle1.restart_pos()
+    paddle2.restart_pos()
+
 paint_back()
 
 # OBJECTS
@@ -107,6 +157,8 @@ ball = Ball(screen, WHITE, WIDTH//2, HEIGHT//2, 15)
 paddle1 = Paddle(screen, WHITE, 15, HEIGHT//2-60, 20, 120 )
 paddle2 = Paddle(screen, WHITE, WIDTH - 20 - 15, HEIGHT//2-60, 20, 120)
 collision = CollisionManager()
+score1 = Score (screen, '0', WIDTH//4, 15)
+score2 = Score (screen, '0', WIDTH - WIDTH//4, 15)
 
 # VARIABLES
 playing = False
@@ -120,9 +172,14 @@ while True:
             sys.exit()
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_p:
+            if event.key == pygame.K_SPACE:
                 ball.start_moving()
                 playing = True
+
+            if event.key == pygame.K_r:
+                restart()
+                playing = False
+                
 
             if event.key == pygame.K_w:
                 paddle1.state = 'up'
@@ -166,6 +223,25 @@ while True:
 
         if collision.between_ball_and_walls(ball):
             ball.wall_collision()
+
+        if collision.check_goal_player1(ball):
+            paint_back()
+            score1.increase()
+            ball.restart_pos()
+            paddle1.restart_pos()
+            paddle2.restart_pos()
+            playing = False
+
+        if collision.check_goal_player2(ball):
+            paint_back()
+            score2.increase()
+            ball.restart_pos()
+            paddle1.restart_pos()
+            paddle2.restart_pos()
+            playing = False
+
+    score1.show()
+    score2.show()
 
     pygame.display.update()
     clock.tick(20) #FPS of game
