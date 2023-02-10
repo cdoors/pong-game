@@ -244,4 +244,4 @@ while True:
     score2.show()
 
     pygame.display.update()
-    clock.tick(20) #FPS of game
+    clock.tick(25) #FPS of game
