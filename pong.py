@@ -1,5 +1,34 @@
 import pygame, sys
 
+class Paddle:
+    def __init__(self, screen, color, posX, posY, width, height):
+        self.screen = screen
+        self.color = color
+        self.posX = posX
+        self.posY = posY
+        self.width = width
+        self.height = height
+        self.state = 'stopped'
+        self.show()
+
+    def show(self):
+        pygame.draw.rect(self.screen, self.color, (self.posX, self.posY, self.width, self.height))
+
+    def move(self):
+        if self.state == 'up':
+            self.posY -= 10 #adjust paddle speed when given movement command
+
+        elif self.state == 'down':
+            self.posY += 10
+
+    def clamp(self):
+        if self.posY <= 0:
+            self.posY = 0
+
+        if self.posY + self.height >= HEIGHT:
+            self.posY = HEIGHT - self.height
+
+
 class Ball:
     def __init__(self, screen, color, posX, posY, radius):
         self.screen = screen
@@ -22,38 +51,46 @@ class Ball:
         self.posX += self.dx
         self.posY += self.dy
 
-class Paddle:
-    def __init__(self, screen, color, posX, posY, width, height):
-        self.screen = screen
-        self.color = color
-        self.posX = posX
-        self.posY = posY
-        self.width = width
-        self.height = height
-        self.state = 'stopped'
-        self.show()
+    def paddle_collision(self):
+        self.dx = -self.dx
 
-    def show(self):
-        pygame.draw.rect(self.screen, self.color, (self.posX, self.posY, self.width, self.height))
+    def wall_collision(self):
+        self.dy = -self.dy
 
-    def move(self):
-        if self.state == 'up':
-            self.posY -= 10 #adjust paddle speed when given movement command
+class CollisionManager:
+    def between_ball_and_paddle1(self, ball, paddle):
+        if ball.posY + ball.radius > paddle.posY and ball.posY - ball.radius < paddle1.posY + paddle1.height:
+            if ball.posX - ball.radius <= paddle1.posX + paddle1.width:
+                return True
 
-        elif self.state == 'down':
-            self.posY += 10
+        return False
 
+    def between_ball_and_paddle2(self,ball, paddle):
+        if ball.posY + ball.radius > paddle2.posY and ball.posY - ball.radius < paddle2.posY + paddle2.height:
+            if ball.posX + ball.radius >= paddle2.posX:
+                return True
+        
+        return False
 
+    def between_ball_and_walls(self, ball):
+        #top
+        if ball.posY - ball.radius <= 0:
+            return True
+        #bottom
+        if ball.posY + ball.radius >= HEIGHT:
+            return True
 
-pygame.init()
-clock = pygame.time.Clock()
+        return False
 
+## Constants
 WIDTH = 900
 HEIGHT = 500
 
 BLACK = (0,0,0) #RGB notation
 WHITE = (255,255,255)
 
+# Intialize
+pygame.init()
 screen = pygame.display.set_mode(( WIDTH, HEIGHT))
 pygame.display.set_caption('Pong')
 
@@ -69,10 +106,11 @@ paint_back()
 ball = Ball(screen, WHITE, WIDTH//2, HEIGHT//2, 15)
 paddle1 = Paddle(screen, WHITE, 15, HEIGHT//2-60, 20, 120 )
 paddle2 = Paddle(screen, WHITE, WIDTH - 20 - 15, HEIGHT//2-60, 20, 120)
-
+collision = CollisionManager()
 
 # VARIABLES
 playing = False
+clock = pygame.time.Clock()
 
 #main loop
 
@@ -105,17 +143,29 @@ while True:
     #ball movement intialized
     if playing:
         paint_back()
+
         ball.move()
         ball.show()
 
         #paddle1
         paddle1.move()
+        paddle1.clamp()
         paddle1.show()
 
         #paddle2
         paddle2.move()
+        paddle2.clamp()
         paddle2.show()
 
+        # check for collisions
+        if collision.between_ball_and_paddle1(ball, paddle1):
+            ball.paddle_collision()
+
+        if collision.between_ball_and_paddle2(ball, paddle2):
+            ball.paddle_collision()
+
+        if collision.between_ball_and_walls(ball):
+            ball.wall_collision()
 
     pygame.display.update()
-    clock.tick(22.5) #FPS of game
+    clock.tick(20) #FPS of game
